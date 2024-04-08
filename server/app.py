@@ -18,30 +18,24 @@ app.json.compact = False
 migrate = Migrate(app, db)
 
 db.init_app(app)
-
-
 api = Api(app)
 
 @app.errorhandler(SQLAlchemyError)
 def handle_database_error(error):
     return {"error": "Database error: " + str(error)}, 500
 
-
 @app.errorhandler(BadRequest)
 def handle_bad_request(error):
     return {"error": "Bad request: " + str(error)}, 400
-
 
 @app.errorhandler(NotFound)
 def handle_not_found(error):
     return {"error": "Not found: " + str(error)}, 404
 
-
 def fetch_one(model, condition):
     stmt = select(model).where(condition)
     result = db.session.execute(stmt)
     return result.scalars().first()
-
 
 def paywall(f):
     def decorated(*args, **kwargs):
@@ -62,7 +56,6 @@ def paywall(f):
 
     return decorated
 
-
 class BaseResource(Resource):
     model = None
 
@@ -76,18 +69,7 @@ class BaseResource(Resource):
                 return {"error": f"{self.model.__name__} not found"}, 404
             return instance.to_dict(), 200
 
-
-class ClearSession(Resource):
-
-    def delete(self):
-
-        session['page_views'] = None
-        session['user_id'] = None
-
-        return {}, 204
-
-
-class IndexArticle(Resource):
+class IndexArticle(BaseResource):
     model = Article
 
     def get(self):
@@ -97,7 +79,7 @@ class IndexArticle(Resource):
         return articles, 200
 
 
-class ShowArticle(Resource):
+class ShowArticle(BaseResource):
     model = Article
     method_decorators = [paywall]
 
@@ -106,7 +88,14 @@ class ShowArticle(Resource):
             return {"message": "Article not found."}, 404
 
         return article.to_dict(), 200
+class ClearSession(Resource):
 
+    def delete(self):
+
+        session['page_views'] = None
+        session['user_id'] = None
+
+        return {}, 204
 
 class Login(Resource):
     model = User
@@ -119,15 +108,11 @@ class Login(Resource):
 
         session["user_id"] = user.id
         return {"id": user.id, "username": user.username}, 200
-
-
 class Logout(Resource):
     model = User
     def delete(self):
         session["user_id"] = None
         return {}, 204
-
-
 class CheckSession(Resource):
     model = User
     
@@ -142,7 +127,6 @@ class CheckSession(Resource):
 
         return {"id": user.id, "username": user.username}, 200
 
-
 api.add_resource(ClearSession, '/clear')
 api.add_resource(IndexArticle, '/articles')
 api.add_resource(ShowArticle, '/articles/<int:id>')
@@ -150,7 +134,6 @@ api.add_resource(ShowArticle, '/articles/<int:id>')
 api.add_resource(Login, "/login")
 api.add_resource(Logout, "/logout")
 api.add_resource(CheckSession, "/check_session")
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
